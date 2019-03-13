@@ -1,0 +1,48 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:		watchdogd
+# Required-Start:
+# Required-Stop:
+# Should-Start :
+# Should-stop:
+# Default-Start:	S
+# Default-Stop:
+# Short-Description:	Start Hardware Watchdog
+# Description:		start Hardware Watchdog with /usr/bin/watchdog
+### END INIT INFO
+
+WATCHDOG_BIN=/usr/bin/watchdogd
+WATCHDOG_ARGS=
+WATCHDOG_PID=/var/run/watchdogd.pid
+
+start_watchdog()
+{
+	echo "Hardware Watchdog : Starting hardware watchdog" >> /dev/kmsg
+	start-stop-daemon -S -q --exec ${WATCHDOG_BIN} -- ${WATCHDOG_ARGS}
+}
+
+stop_watchdog()
+{
+	echo "Hardware Watchdog : Stopping hardware watchdog" >> /dev/kmsg
+	start-stop-daemon -K -p ${WATCHDOG_PID}
+}
+
+case "$1" in
+	start)
+		start_watchdog
+		;;
+	stop)
+		stop_watchdog
+		;;
+	restart|reload|force-reload)
+		stop_watchdog
+		start_watchdog
+		;;
+	*)
+		echo "Usage: $0 start"
+		exit 1
+		;;
+esac
+exit 0
+
