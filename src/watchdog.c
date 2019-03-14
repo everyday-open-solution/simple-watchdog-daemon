@@ -41,12 +41,38 @@ void sigHandler(int signum, siginfo_t* info, void* ptr);
 void catchSigterm(void);
 
 
-int main(void) {
+int main(int argc, char** argv) {
 
 	pid_t pid, sid;								// Pid and sid for daemon fork
 	FILE* pidFile = NULL;
 
+	/* Configurable option */
+	char* pidFileName = "/var/run/watchdogd.pid";
+	int watchdogTimeOut = 10;
+
+	int opt;											// Argument buffer
+
 	catchSigterm();								// Enable SIGTERM handler
+
+	/* Parse argument and configure watchdog */
+	while ((opt = getopt (argc, argv, "dD:t:p:")) != -1)
+	switch (opt)
+		{
+		case 'd':
+			//disarmFlag = 1;
+			break;
+		case 'D':
+			//watchdogDriver = optarg;
+			break;
+		case 't':
+			watchdogTimeOut = atoi(optarg);
+			break;
+		case 'p':
+			pidFileName = optarg;
+			break;
+		case '?':
+			syslog(LOG_WARNING,"Bad Argument %c while be ignored",optopt);
+		}
 
 	/* Fork Parent Process */
 	pid=fork();
@@ -77,7 +103,7 @@ int main(void) {
 		return 1;
 
 	/* Write PID in file */
-	pidFile = fopen("/var/run/watchdogd.pid","w");
+	pidFile = fopen(pidFileName,"w");
 	if(pidFile != NULL)
 	{
 		fprintf(pidFile,"%d",getpid());
@@ -88,7 +114,7 @@ int main(void) {
 	while (daemonRunning)
 	{
 		pingWd();
-		sleep(10);
+		sleep(watchdogTimeOut);
 	}
 
 	return 0;
