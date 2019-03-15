@@ -31,9 +31,10 @@
 
 
 static int fd = -1;								// Posix file descriptor
-unsigned char daemonRunning = 1;
+static unsigned char daemonRunning = 1;
+static unsigned char watchdogDisarm = 0;
 
-static int openWd(void);
+static int openWd(char*);
 static int pingWd(void);
 static int closeWd(void);
 
@@ -48,6 +49,7 @@ int main(int argc, char** argv) {
 
 	/* Configurable option */
 	char* pidFileName = "/var/run/watchdogd.pid";
+	char* watchdogDriver = "/dev/watchdog";
 	int watchdogTimeOut = 10;
 
 	int opt;											// Argument buffer
@@ -59,10 +61,10 @@ int main(int argc, char** argv) {
 	switch (opt)
 		{
 		case 'd':
-			//disarmFlag = 1;
+			watchdogDisarm = 1;
 			break;
 		case 'D':
-			//watchdogDriver = optarg;
+			watchdogDriver = optarg;
 			break;
 		case 't':
 			watchdogTimeOut = atoi(optarg);
@@ -99,7 +101,7 @@ int main(int argc, char** argv) {
 	close(STDERR_FILENO);
 
 	/* Opend Harware Watchdog Driver */
-	if(openWd())
+	if(openWd(watchdogDriver))
 		return 1;
 
 	/* Write PID in file */
@@ -135,11 +137,11 @@ int main(int argc, char** argv) {
  * Brief		: Open /dev/watchdog with posix file descriptor and log the driver description
  * ==============================================
  */
-static int openWd(void)
+static int openWd(char* watchdogDriver)
 {
 	struct watchdog_info id;
 
-	fd = open("/dev/watchdog",O_WRONLY|O_CLOEXEC);
+	fd = open(watchdogDriver,O_WRONLY|O_CLOEXEC);
 	if(fd < 0)
 		goto EXIT_WITH_OPEN_FAILURE;
 
@@ -181,13 +183,34 @@ static int pingWd(void)
  */
 static int closeWd(void)
 {
+	int disarmFlag = WDIOS_DISABLECARD;
+	const char magicVValue = 'V';
+
+	int exitValue = 0;
+
 	if(fd<0)
 		goto EXIT;
 
+	if(watchdogDisarm)
+	{
+		if(ioctl(fd, WDIOC_SETOPTIONS, &disarmFlag))
+		{
+			syslog(LOG_ERR, "Something went wrong while calling system to disarm watchdog");
+			exitValue = 1;
+		}
+		/* In addition to the syscall we use the "magic value" to ensure watchdog disarmement */
+		if(write(fd,&magicVValue,1) <1)
+		{
+			syslog(LOG_ERR, "Error while disarming the watchdog. It might still be active");
+			exitValue = 1;
+		}
+		else
+			exitValue = 0;
+	}
 	fd = close(fd);
 
 	EXIT:
-	return 0;
+	return exitValue;
 }
 /*
  * ==============================================
