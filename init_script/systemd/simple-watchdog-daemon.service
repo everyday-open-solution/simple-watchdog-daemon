@@ -1,0 +1,12 @@
+[Unit]
+Description=A simple Hardware watchdog that run as daemon
+
+[Service]
+Type=forking
+User=root
+WorkingDirectory=/
+ExecStart=/usr/bin/watchdogd -d
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
