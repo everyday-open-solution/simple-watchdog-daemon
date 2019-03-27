@@ -111,6 +111,8 @@ int main(int argc, char** argv) {
 		fprintf(pidFile,"%d",getpid());
 		fclose(pidFile);
 	}
+	else
+		syslog(LOG_WARNING,"Warning failed to write pid in %s",pidFileName);
 
 	/* Daemon Loop */
 	while (daemonRunning)
@@ -118,6 +120,9 @@ int main(int argc, char** argv) {
 		pingWd();
 		sleep(watchdogTimeOut);
 	}
+
+	if(remove(pidFileName))
+		syslog(LOG_WARNING,"Warning failed to remove pid file : %s",pidFileName);
 
 	return 0;
 	EXIT_WITH_BAD_FORK:
@@ -140,6 +145,7 @@ int main(int argc, char** argv) {
 static int openWd(char* watchdogDriver)
 {
 	struct watchdog_info id;
+	FILE* dmesgFile = NULL;
 
 	fd = open(watchdogDriver,O_WRONLY|O_CLOEXEC);
 	if(fd < 0)
@@ -147,7 +153,13 @@ static int openWd(char* watchdogDriver)
 
 	if(ioctl(fd, WDIOC_GETSUPPORT, &id) >=0)
 	{
-			system("echo \"Watchdog daemon : started\" >> /dev/kmsg");
+			//system("echo \"Watchdog daemon : started\" >> /dev/kmsg");
+			dmesgFile = fopen("/dev/kmsg","a");
+			if(dmesgFile != NULL)
+			{
+				fprintf(dmesgFile,"Watchdog daemon : started");
+				fclose(dmesgFile);
+			}
 			syslog(LOG_INFO,"Watchdog daemon : started with '%s' driver, version %x", id.identity, id.firmware_version);
 	}
 
