@@ -42,9 +42,9 @@ watchdogd <args>
 Arguments :
 
   * -d  Enable disarmement : the deamon will disarm the watchdog when closing
-  * -D<driverFile> : the watchdog will use the specified driver file
-  * -t<timeOut>    : the watchdog will use the specified timeOut in seconds
-  * -p<pidFile>    : the watchdog will use the specified pidFile to write its PID
+  * -D<driverFile\> : the watchdog will use the specified driver file
+  * -t<timeOut\>    : the watchdog will use the specified timeOut in seconds
+  * -p<pidFile\>    : the watchdog will use the specified pidFile to write its PID
 
 ## Contact ##
 
